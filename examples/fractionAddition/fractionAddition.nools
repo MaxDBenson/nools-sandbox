@@ -1,0 +1,235 @@
+define AddFractionsGoal {
+	name: "add fractions",
+	fractions: [],
+	constructor: function (f){
+		this.fractions = f;
+	}
+}
+
+define ConvertFractionsGoal {
+	name: "convert fractions",
+	fraction: null,
+	denomVal: null,
+	denomDone: null,
+	numDone: null,
+	constructor: function(f, dv, dd, nd) {
+		this.fraction = f;
+		this.denomVal = dv;
+		this.denomDone = dd;
+		this.numDone = nd;
+	}
+}
+
+define Fraction {
+	name: '',
+	numerator: null,
+	denominator: null,
+	convertedForm: null,
+	isConvertedFrom: null,
+	constructor: function(na, nu, d, h, i) {
+		this.name = na;
+		this.numerator = nu;
+		this.denominator = d;
+		this.convertedForm = h;
+		this.isConvertedFrom = i;
+	}
+}
+
+define Problem {
+	name: '',
+	givenFractions: [],
+	convertedFractions: [],
+	answerFractions: [],
+	subgoals: [],
+	constructor: function(n, gf, cf, af, s) {
+		this.name = n;
+		this.givenFractions = gf;
+		this.convertedFractions = cf;
+		this.answerFractions = af;
+		this.subgoals = s;
+	}
+}
+
+define ReduceFractionGoal {
+	name: "reduce fractions",
+	fraction: null,
+	factor: null,
+	constructor: function(fr, fa) {
+		this.fraction = fr;
+		this.factor = fa;
+	}
+}
+
+define TextField {
+	name: '',
+	value: null,
+	constructor: function(n, v) {
+		this.name = n;
+		this.value = v;
+	}
+}
+
+define StudentValues {
+	selection: null,
+	action: null,
+	input: null,
+	constructor: function(s, a, i) {
+		this.selection = s;
+		this.action = a;
+		this.input = i;
+	}
+}
+
+function hasMembers(arr, numMembers, nullOk)
+{
+	var ret = false;
+	if (arr.length === numMembers)
+	{	
+		if (!nullOk)
+		{
+			for (var i = 0; i < numMembers; i++)
+			{
+				ret = !!arr[i];
+			}
+		}
+		else ret = true;
+	}
+	return ret;
+}
+
+rule SameDenominators {
+	when {
+		prob: Problem hasMembers(prob.givenFractions, 2) && hasMembers(prob.subgoals, 0, true) {givenFractions : fractions};
+		f1 : Fraction f1.denominator && f1.name == fractions[0] {denominator: d1};
+		f2 : Fraction f2.denominator == d1 && f2.name == fractions[1];
+	}
+	then {
+		var addGoal = assert(new AddFractionsGoal([f1.name, f2.name]));
+		modify(prob, function() {
+			this.subgoals = [addGoal];
+		});
+	}
+}
+
+rule DetermineProduct {
+	when {
+		prob: Problem hasMembers(prob.givenFractions, 2) && 
+					  hasMembers(prob.convertedFractions, 2) &&
+					  hasMembers(prob.subgoals, 0, true) {givenFractions: givens, convertedFractions: converted};
+		f1 : Fraction f1.name == givens[0] && f1.denominator {denominator: denom1};
+		f2 : Fraction f2.name == givens[1] && f2.denominator {denominator: denom2};
+	}
+	then {
+		var newDen = denom1 * denom2;
+		var convertGoal1 = assert(new ConvertFractionsGoal(f1.name, newDen, false, false));
+		var convertGoal2 = assert(new ConvertFractionsGoal(f2.name, newDen, false, false));
+		var addGoal = assert(new AddFractionsGoal([converted[0], converted[1]]));
+		modify(prob, function() {
+			this.subgoals = [convertGoal1, convertGoal2, addGoal];
+		});
+	}
+}
+
+rule ConvertDenominator {
+	when {
+		convertGoal: ConvertFractionsGoal convertGoal.denomVal != null && convertGoal.denomDone == false {fraction: f1};
+		fraction: Fraction fraction.name == f1 && fraction.convertedForm != null {convertedForm: cf};
+		convForm: Fraction convForm.name == cf;
+		sai: StudentValues;
+	}
+	then {
+		//check SAI for match
+		if (checkSAI(sai, {selection: convForm.name+'denom', action: 'updateTextField', input: convertGoal.denomVal}))
+		{
+			retract(sai);
+			modify(convForm, function() {
+				this.denominator = convertGoal.denomVal;
+			});
+			modify(convertGoal, function() {
+				this.denomDone = true;
+			});
+			
+			halt();
+		}
+	}
+}
+
+rule ConvertNumerator {
+	when {
+		convertGoal: ConvertFractionsGoal convertGoal.denomVal != null && convertGoal.numDone == false {fraction: f1, denomVal: denom};
+		fraction: Fraction fraction.name == f1 && fraction.convertedForm != null {convertedForm: cf};
+		convForm: Fraction convForm.name == cf;
+		sai: StudentValues;
+	}
+	then {
+		var newNum = fraction.numerator * (denom / fraction.denominator);
+		if (checkSAI(sai, {selection: convForm.name+'numer', action: 'updateTextField', input: newNum}))
+		{
+			retract(sai);
+			modify(convForm, function() {
+				this.numerator = newNum;
+			});
+			modify(convertGoal, function() {
+				this.numDone = true;
+			});
+
+			halt();
+		}
+	}
+}
+
+rule AddNumerators {
+	when {
+		addGoal: AddFractionsGoal hasMembers(addGoal.fractions, 2) {fractions: addends};
+		f1: Fraction f1.name == addends[0] && f1.numerator {numerator: n1};
+		f2: Fraction f2.name == addends[1] && f2.numerator {numerator: n2};
+		f3: Fraction f3.name == "ans1" && f3.numerator == null;
+		sai: StudentValues;
+	}
+	then {
+		var sum = n1+n2;
+		if (checkSAI(sai, {selection: 'ans1numer', action: 'updateTextField', input: sum}))
+		{
+			retract(sai);
+			modify(f3, function() {
+				f3.numerator = sum;
+			});
+
+			halt();
+		}
+	}
+}
+
+rule CopyDenom {
+	when {
+		addGoal: AddFractionsGoal hasMembers(addGoal.fractions, 2) {fractions: addends};
+		f1: Fraction f1.name == addends[0] && f1.denominator {denominator: d1};
+		ans: Fraction ans.name == "ans1" && ans.denominator == null;
+		sai: StudentValues;
+	}
+	then {
+		if (checkSAI(sai, {selection: 'ans1denom', action: 'updateTextField', input: d1}))
+		{
+			retract(sai);
+			modify(ans, function() {
+				this.denominator = d1;
+			});
+
+			halt();
+		}
+	}
+}
+
+rule Done {
+	when {
+		ans: Fraction ans.name == "ans1" && ans.numerator && ans.denominator;
+		sai: StudentValues;
+	}
+	then {
+		if (checkSAI(sai, {selection: 'doneBtn', action: 'click', input: '1'}))
+		{
+			retract(sai);
+			console.log('Done!  The answer is: '+ans.numerator+ '/' +ans.denominator);
+		}
+	}
+}

@@ -1,0 +1,37 @@
+[
+	{
+		"selection": "conv1denom", 
+		"action": "updateTextField",
+		"input": 21
+	},
+	{
+		"selection": "conv2denom", 
+		"action": "updateTextField",
+		"input": 21
+	},
+	{
+		"selection": "conv1numer", 
+		"action": "updateTextField",
+		"input": 7
+	},
+	{
+		"selection": "conv2numer", 
+		"action": "updateTextField",
+		"input": 6
+	},
+	{
+		"selection": "ans1denom", 
+		"action": "updateTextField",
+		"input": 21
+	},
+	{
+		"selection": "ans1numer",
+		"action": "updateTextField",
+		"input": 13
+	},
+	{
+		"selection": "doneBtn",
+		"action": "click",
+		"input": 1
+	}
+]
