@@ -1,0 +1,7 @@
+[
+	{
+		"selection": "commonAmntInput",
+		"action": "UpdateTextField",
+		"input": 120
+	}
+]

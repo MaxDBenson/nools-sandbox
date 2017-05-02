@@ -129,7 +129,10 @@ module.exports = declare(EventEmitter, {
             }
             return this.getFocusedAgenda().isEmpty();
         },
-
+		
+		/**
+		*	Fire next activation on the focused agenda
+		**/
         fireNext: function () {
             var agendaGroupStack = this.agendaGroupStack, ret = false;
             while (this.getFocusedAgenda().isEmpty() && this.getFocused() !== DEFAULT_AGENDA_GROUP) {
@@ -151,7 +154,10 @@ module.exports = declare(EventEmitter, {
             //return false if activation not fired
             return ret;
         },
-
+		
+		/**
+		*	remove and return next activation on the focused agenda
+		*/
         pop: function () {
             var tree = this.getFocusedAgenda(), root = tree.__root;
             while (root.right) {
@@ -164,7 +170,10 @@ module.exports = declare(EventEmitter, {
             rule.factTable.remove(v);
             return v;
         },
-
+		
+		/**
+		*	return next activation on the focused agenda
+		*/
         peek: function () {
             var tree = this.getFocusedAgenda(), root = tree.__root;
             while (root.right) {
@@ -187,9 +196,14 @@ module.exports = declare(EventEmitter, {
                 rule.tree.remove(activation);
             }
         },
-
+		
+		/**
+		*	Add a new activation to the agenda
+		*	@param node the terminal node which caused the activation
+		*	@param insert the activation object to insert
+		*/
         insert: function (node, insert) {
-            var rule = this.rules[node.name], nodeRule = node.rule, agendaGroup = nodeRule.agendaGroup;
+			var rule = this.rules[node.name], nodeRule = node.rule, agendaGroup = nodeRule.agendaGroup;
             rule.tree.insert(insert);
             this.getAgendaGroup(agendaGroup).insert(insert);
             if (nodeRule.autoFocus) {
@@ -1989,6 +2003,11 @@ module.exports = declare(EventEmitter, {
     }
 });
 },{"./agenda":3,"./executionStrategy":11,"./extended":12,"./nodes":27,"./workingMemory":50,"events":60}],14:[function(require,module,exports){
+/*
+	From what I can tell, this class acts as a sort-of flow factory (sort-of b/c there's still 1-1 correspondence b/w a flowContainer
+	and a flow).  A flow is a set of instanciated rules (i.e. a Rete).  This class translates rule declarations into rule objects 
+	and stores them in an array until getSession is called, which initializes a flow object with the stored rules.
+*/
 "use strict";
 var extd = require("./extended"),
     instanceOf = extd.instanceOf,
@@ -2039,18 +2058,21 @@ var FlowContainer = declare({
             this.__defined[name.toLowerCase()] = cls;
             return cls;
         },
-
+		
+		//Create a new Rule object and add it to the rule list
         rule: function () {
             this.__rules = this.__rules.concat(rule.createRule.apply(rule, arguments));
             return this;
         },
-
+		
+		//Initialize a new Flow object and assert each rule on the list (build the Rete)
         getSession: function () {
             var flow = new Flow(this.name, this.conflictResolutionStrategy);
             forEach(this.__rules, function (rule) {
                 flow.rule(rule);
             });
             flow.assert(new InitialFact());
+			//assert any facts passed in
             for (var i = 0, l = arguments.length; i < l; i++) {
                 flow.assert(arguments[i]);
             }
@@ -3329,6 +3351,11 @@ JoinNode.extend({
     }
 }).as(module);
 },{"../constraint":8,"../context":10,"../extended":12,"./joinNode":28}],27:[function(require,module,exports){
+/**
+	Defines the "RootNode" symbol, which I guess acts as the entry point to the Rete network.
+	Pretty sure all rule and fact assertions/modifications/retractions come through here.
+	Note that this class doesn't seem to inherit from Node
+**/
 "use strict";
 var extd = require("../extended"),
     forEach = extd.forEach,
@@ -3383,7 +3410,8 @@ declare({
             this.agendaTree = agendaTree;
             this.workingMemory = wm;
         },
-
+		
+		//Add a new rule to the network
         assertRule: function (rule) {
             var terminalNode = new TerminalNode(this.bucket, this.__ruleCount++, rule, this.agendaTree);
             this.__addToNetwork(rule, rule.pattern, terminalNode);
@@ -3515,7 +3543,14 @@ declare({
             parentNode.addOutNode(outNode, pattern);
             return joinNode.addRule(rule);
         },
-
+		
+		/*
+			Add a new rule to the network
+			@param rule the rule
+			@param pattern the rule's 'pattern' property
+			@param outNode the terminalNode object for the rule
+			@param side ??
+		*/
         __addToNetwork: function (rule, pattern, outNode, side) {
             if (pattern instanceof ObjectPattern) {
                 if (!(pattern instanceof InitialFactPattern) && (!side || side === "left")) {
@@ -3536,7 +3571,13 @@ declare({
             return joinNode;
         },
 
-
+		/*
+			Create series of alpha nodes and add to the network
+			@param rule the associated rule
+			@param pattern part (?or all?) of the rule's matching pattern
+			@param outNode the direct downstream node of the node(s) to be created
+			@param side ??
+		*/
         __createAlphaNode: function (rule, pattern, outNode, side) {
             var typeNode, parentNode;
             if (!(pattern instanceof FromPattern)) {
@@ -4820,12 +4861,22 @@ Node.extend({
     }
 }).as(module);
 },{"./adapterNode":18}],41:[function(require,module,exports){
+/**
+*  One terminal node per rule  
+*/
+
 var Node = require("./node"),
     extd = require("../extended"),
     bind = extd.bind;
 
 Node.extend({
     instance: {
+		/*
+			@param bucket
+			@param index the index associated with the rule
+			@param rule the rule represented by this node
+			@param agenda the agenda of activations
+		*/
         constructor: function (bucket, index, rule, agenda) {
             this._super([]);
             this.resolve = bind(this, this.resolve);
@@ -6536,16 +6587,21 @@ var getParamType = function getParamType(type, scope) {
     return _getParamType(type);
 };
 
+/*
+	Create a normalized pattern from a condition in a rule
+	conditions (input) have form [ <'or'> [<'not',> <factType>, <factNamePlaceholder>, <condition>, <{variable bindings}>]... ]
+	@returns Array
+*/
 var parsePattern = extd
     .switcher()
-    .containsAt("or", 0, function (condition) {
+    .containsAt("or", 0, function (condition) { //CASE is an 'or' of multiple tokens
         condition.shift();
-        return extd(condition).map(function (cond) {
+        return extd(condition).map(function (cond) { //for each operand of the or
             cond.scope = condition.scope;
-            return parsePattern(cond);
-        }).flatten().value();
+            return parsePattern(cond);				//parse as its own token
+        }).flatten().value();						//flatten array, then ??
     })
-    .containsAt("not", 0, function (condition) {
+    .containsAt("not", 0, function (condition) { //CASE is a negation
         condition.shift();
         condition = normailizeConstraint(condition);
         if (condition[4] && condition[4].from) {
@@ -6629,7 +6685,7 @@ var parsePattern = extd
 var Rule = declare({
     instance: {
         constructor: function (name, options, pattern, cb) {
-            this.name = name;
+			this.name = name;
             this.pattern = pattern;
             this.cb = cb;
             if (options.agendaGroup) {
@@ -6655,6 +6711,15 @@ var Rule = declare({
     }
 });
 
+/*
+	Create a rule
+	@param name an identifier for the rule
+	@param options either A) array of form [[<factType>, <factNamePlaceholder>, <condition>]...] 
+						B) set of config options (salience, agendaGroup, etc.)
+		(note: if (A) and length is 1 then outer array may or may not exist)
+	@param conditions if options is (B) above, then this is (A), else this is the RHS. 
+	@param if options is (B) above, then this is the RHS, else this is ignored
+*/
 function createRule(name, options, conditions, cb) {
     if (isArray(options)) {
         cb = conditions;
@@ -6662,6 +6727,7 @@ function createRule(name, options, conditions, cb) {
     } else {
         options = options || {};
     }
+	//check if > 1 token in rule (where token is [<factType>, <factNamePlaceholder>, <condition>])
     var isRules = extd.every(conditions, function (cond) {
         return isArray(cond);
     });
@@ -6672,8 +6738,9 @@ function createRule(name, options, conditions, cb) {
     var rules = [];
     var scope = options.scope || {};
     conditions.scope = scope;
-    if (isRules) {
-        var _mergePatterns = function (patt, i) {
+    if (isRules) { //multiple tokens in rule
+        
+		var _mergePatterns = function (patt, i) {
             if (!patterns[i]) {
                 patterns[i] = i === 0 ? [] : patterns[i - 1].slice();
                 //remove dup
@@ -6686,16 +6753,16 @@ function createRule(name, options, conditions, cb) {
                     p.push(patt);
                 });
             }
-
         };
-        var l = conditions.length, patterns = [], condition;
-        for (var i = 0; i < l; i++) {
+        
+		var l = conditions.length, patterns = [], condition;
+        for (var i = 0; i < l; i++) { //for each condition (token)
             condition = conditions[i];
             condition.scope = scope;
             extd.forEach(parsePattern(condition), _mergePatterns);
-
         }
-        rules = extd.map(patterns, function (patterns) {
+        
+		rules = extd.map(patterns, function (patterns) {
             var compPat = null;
             for (var i = 0; i < patterns.length; i++) {
                 if (compPat === null) {
@@ -6704,11 +6771,12 @@ function createRule(name, options, conditions, cb) {
                     compPat = new CompositePattern(compPat, patterns[i]);
                 }
             }
-            return new Rule(name, options, compPat, cb);
+            return new Rule(name, options, compPat, cb); //create actual rule
         });
+		
     } else {
         rules = extd.map(parsePattern(conditions), function (cond) {
-            return new Rule(name, options, cond, cb);
+            return new Rule(name, options, cond, cb); //create actual rule
         });
     }
     return rules;

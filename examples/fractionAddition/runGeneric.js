@@ -1,6 +1,3 @@
-/**
-	Usage: node run.js <rulefile.nools> <factFile> <SAIFile> [options...]
-**/
 var fs = require('fs');
 var nools = require('../../');
 
@@ -27,22 +24,6 @@ function log(flag, msg)
 		console.log(msg);
 }
 
-function checkSAI(sai1, sai2)
-{
-	log('sai_check', 'Checking SAI...');
-	log('sai_check', 'Student: '+JSON.stringify(sai1));
-	log('sai_check', 'Predicted: '+JSON.stringify(sai2));
-	var ret = (sai1.selection == sai2.selection &&
-		sai1.action == sai2.action &&
-		sai1.input  == sai2.input);
-	
-	if (ret) log('sai_check', 'Match!');
-	else log('sai_check', 'No Match');
-	log('sai_check', '');
-	
-	return ret;
-}
-
 function parseFacts(facts) {
 	var types = {};
 	var initFacts = [];
@@ -56,22 +37,13 @@ function parseFacts(facts) {
 	return initFacts;
 }
 
-function parseSAIs(sais) {
-	var initSAIs = [];
-	var SAI = flow.getDefined("StudentValues");
-	sais.forEach((sai) => {
-		initSAIs.push(new SAI(sai.selection, sai.action, sai.input));
-	});
-	return initSAIs;
-}
-
 function execFlow(facts, optSAIs) {
 	//get session and assert facts
 	var session = flow.getSession();
 	facts.forEach(function(fact) {
 		session.assert(fact);
 	});
-
+	
 	//set up listeners
 	for (let e in events)
 	{
@@ -99,25 +71,10 @@ function execFlow(facts, optSAIs) {
 	}
 }
 
-function assertNextSAI(session, sais) {
-	let nextSAI = sais.shift();
-	log('sai_assert', "SAI ASSERTED: "+JSON.stringify(nextSAI)+'\n');
-	session.assert(nextSAI);
-	session.matchUntilHalt().then(
-		() => { assertNextSAI(session, sais) },
-		(err) => {
-			console.log("There was an error");
-			console.log(err);
-		}
-	);
-}
-
 function listen(session, e, f)
 {
 	session.on(e, f);
 }
-
-//-------- execution starts here ----------//
 
 //get args
 var args = process.argv.slice(2);

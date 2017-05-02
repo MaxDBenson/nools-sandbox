@@ -1,0 +1,6 @@
+[
+	{
+		"type": "Person",
+		"args": ["100", 100, 100, ["Frank", "Steve", "Chark"]]
+	}
+]

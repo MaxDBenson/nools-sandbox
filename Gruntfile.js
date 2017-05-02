@@ -95,7 +95,7 @@ module.exports = function (grunt) {
         files.forEach(function (file) {
             var base = path.basename(file, ".nools"),
                 out = path.resolve(path.dirname(file), base + "-compiled.js");
-            child.exec(path.resolve(__dirname, "./bin/nools") + " compile " + file + " -l ../../ -n " + base + "-compiled", function (err, output) {
+            child.exec("node "+path.resolve(__dirname, "./bin/nools") + " compile " + file + " -l ../../ -n " + base + "-compiled", function (err, output) {
                 if (!err) {
                     grunt.file.write(out, output.toString());
                 }

@@ -1,0 +1,213 @@
+define Problem {
+	unit: null,
+	commonFactor: null,
+	commonMultiple: null,
+	moreIsBetter: null,
+	commonAmountInterfaceEl: null,
+	constructor: function(u, cf, cm, m, ca) {
+		this.unit = u;
+		this.commonFactor = cf;
+		this.commonMultiple = cm;
+		this.moreIsBetter = m;
+		this.commonAmountInterfaceEl = ca;
+	}
+}
+
+define StudentValues {
+	selection: null,
+	action: null,
+	input: null,
+	constructor: function(s, a, i) {
+		this.selection = s;
+		this.action = a;
+		this.input = i;
+	}
+}
+
+define Option {
+	name: null,
+	givenValues: [],
+	interfaceElements: [],
+	constructor: function(n, g, i) {
+		this.name = n;
+		this.givenValues = g;
+		this.interfaceElements = i;
+	}
+}
+
+define TextInput {
+	name: null,
+	value: null,
+	constructor: function(n, v) {
+		this.name = n;
+		this.value = v;
+	}
+}
+
+define RadioButton {
+	name: null,
+	input: null,
+	value: null,
+	constructor: function(n, i, v) {
+		this.name = n;
+		this.input = i;
+		this.value = v;
+	}
+}
+
+define CommonAmountSubgoal {
+	amounts: [],
+	constructor: function(a) {
+		this.amounts = a;
+	}
+}
+
+function predictObservable(s, a, i, comp)
+{
+	return true;
+}
+
+rule EnterGivenAmount {
+	when {
+		opt : Option opt.givenValues[0] && opt.interfaceElements[0] {givenValues: givenVals, interfaceElements: interfaceEls};
+		input : TextInput input.name == interfaceEls[0] && !input.value;
+	}
+	then {
+		predictObservable(input.name, "UpdateTextField", givenVals[0], "numEqual");
+		modify(input, function() {
+			this.value = givenVals[0];
+		});
+	}
+}
+
+rule EnterGivenCost {
+	when {
+		opt : Option opt.givenValues[1] && opt.interfaceElements[1] {givenValues: givenVals, interfaceElements: interfaceEls};
+		input : TextInput input.name == interfaceEls[1] && !input.value;
+	}
+	then {
+		predictObservable(input.name, "UpdateTextField", givenVals[1], "numEqual");
+		modify(input, function() {
+			this.value = givenVals[1];
+		});
+	}
+}
+
+rule DetermineCommonAmount {
+	when {
+		prob : Problem prob.commonAmountInterfaceEl {commonAmountInterfaceEl: input1Name};
+		opt1 : Option {interfaceElements: opt1Elements};
+		opt2 : Option opt2 != opt1 {interfaceElements: opt2Elements};
+		input1 : TextInput input1.name == input1Name && !input1.value;
+		input2 : TextInput input2.name == opt1Elements[0] && input2.value {value: input2Value};
+		input3 : TextInput input3.name == opt1Elements[1] && input3.value;
+		input4 : TextInput input4.name == opt2Elements[0] && input4.value {value: input4Value};
+		input5 : TextInput input5.name == opt2Elements[1] && input5.value;
+	}
+	then {
+		assert(new CommonAmountSubgoal([input2Value, input4Value]));
+	}
+}
+
+rule UseCommonMultiple {
+	when {
+		cmnAmntSubgoal : CommonAmountSubgoal cmnAmntSubgoal.amounts {amounts: subgoalAmounts};
+		prob: Problem prob.commonMultiple == true && prob.commonAmountInterfaceEl {commonAmountInterfaceEl: inputName};
+		input: TextInput input.name == inputName;
+		sai: StudentValues sai.input {input: studentInput}
+	}
+	then {
+		var amntStr = ""+subgoalAmounts[0] + " " + subgoalAmounts[1];
+		predictObservable(inputName, "UpdateTextField", amntStr, "commonMultiple");
+		modify(input, function() {
+			this.value = studentInput;
+		});
+		retract(cmnAmntSubgoal);
+	}
+}
+
+rule UseCommonFactor {
+	when {
+		cmnAmntSubgoal : CommonAmountSubgoal cmnAmntSubgoal.amounts {amounts: subgoalAmounts};
+		prob: Problem prob.commonFactor == true && prob.commonAmountInterfaceEl {commonAmountInterfaceEl: inputName};
+		input: TextInput input.name == inputName;
+		sai: StudentValues sai.input {input: studentInput}
+	}
+	then {
+		var amntStr = ""+amounts[0] + " " + amounts[1];
+		predictObservable(inputName, "UpdateTextField", amntStr, "commonFactor");
+		modify(input, function() {
+			this.value = studentInput;
+		});
+		retract(cmnAmntSubgoal);
+	}
+}
+
+rule useUnit {
+	when {
+		cmnAmntSubgoal : CommonAmountSubgoal cmnAmntSubgoal.amounts;
+		prob: Problem prob.unit == true && prob.commonAmountInterfaceEl {commonAmountInterfaceEl: inputName};
+		input: TextInput input.name == inputName; 
+	}
+	then {
+		predictObservable(inputName, "UpdateTextField", 1, "numEqual");
+		modify(input, function() {
+			this.value = 1;
+		});
+		retract(cmnAmntSubgoal);
+	}
+}
+
+rule DetermineNormalizedCost {
+	when {
+		prob : Problem prob.commonAmountInterfaceEl {commonAmountInterfaceEl: inputName};
+		cmnAmntInput : TextInput cmnAmntInput.name == inputName && cmnAmntInput.value {value: cmnAmntVal};
+		opt : Option opt.givenValues && opt.interfaceElements {givenValues: givenVals, interfaceElements: interfaceEls};
+		normCostInput : TextInput normCostInput.name == interfaceEls[2] && !normCostInput.value;
+	}
+	then {
+		console.log("DetermineNormalized");
+
+		var amount = parseInt(givenVals[0], 10);
+		var cost = parseInt(givenVals[1], 10);
+		cmnAmntVal = parseInt(cmnAmntVal, 10);
+		var normCost = (cmnAmntVal/amount)*cost;
+		
+		console.log("cmnAmntVal: "+cmnAmntVal+", amount: "+amount+", cost: "+cost+", normCost: "+normCost);
+		
+		predictObservable(normCostInput.name, "UpdateTextField", normCost, "numEqual");
+		modify(normCostInput, function() {
+			this.value = normCost;
+		});
+	}
+}
+
+rule Compare {
+	when {
+		prob : Problem {moreIsBetter: more};
+		opt1 : Option opt1.interfaceElements {interfaceElements: intElements1};
+		opt2 : Option opt2 != opt1 && opt2.interfaceElements {interfaceElements: intElements2};
+		normInput1 : TextInput normInput1.name == intElements1[2] && normInput1.value {value : normVal1};
+		radioInput1 : RadioButton radioInput1.name == intElements1[3] && !radioInput1.value {name: radioName, input: inp};
+		or( 
+			normInput2 : TextInput normInput2.name == intElements2[2] && normInput2.value > normVal1 && more == false {value : normVal2},
+			normInput2 : TextInput normInput2.name == intElements2[2] && normInput2.value < normVal1 && more == true {value: normVal2}
+		);
+	}
+	then {
+		predictObservable(radioName, "UpdateRadioButton", inp);
+		modify(radioInput1, function() {
+			this.value = inp;
+		});
+		console.log("Done, "+opt1.name+" is the better option with "+opt1.givenValues[0]+" tickets for "+opt1.givenValues[1]);
+	}
+}
+
+rule Done {
+	when {
+		radioBtn : RadioButton radioBtn.value
+	}
+	then {
+		predictObservable("done", "ButtonPressed", -1);
+	}
+}

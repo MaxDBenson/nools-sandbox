@@ -98,6 +98,7 @@ function hasMembers(arr, numMembers, nullOk)
 }
 
 rule SameDenominators {
+	salience: 1;
 	when {
 		prob: Problem hasMembers(prob.givenFractions, 2) && hasMembers(prob.subgoals, 0, true) {givenFractions : fractions};
 		f1 : Fraction f1.denominator && f1.name == fractions[0] {denominator: d1};
@@ -112,6 +113,7 @@ rule SameDenominators {
 }
 
 rule DetermineProduct {
+	salience: 2;
 	when {
 		prob: Problem hasMembers(prob.givenFractions, 2) && 
 					  hasMembers(prob.convertedFractions, 2) &&
@@ -131,6 +133,7 @@ rule DetermineProduct {
 }
 
 rule ConvertDenominator {
+	salience: 3;
 	when {
 		convertGoal: ConvertFractionsGoal convertGoal.denomVal != null && convertGoal.denomDone == false {fraction: f1};
 		fraction: Fraction fraction.name == f1 && fraction.convertedForm != null {convertedForm: cf};
@@ -155,6 +158,7 @@ rule ConvertDenominator {
 }
 
 rule ConvertNumerator {
+	salience: 4;
 	when {
 		convertGoal: ConvertFractionsGoal convertGoal.denomVal != null && convertGoal.numDone == false {fraction: f1, denomVal: denom};
 		fraction: Fraction fraction.name == f1 && fraction.convertedForm != null {convertedForm: cf};
@@ -179,6 +183,7 @@ rule ConvertNumerator {
 }
 
 rule AddNumerators {
+	salience: 5;
 	when {
 		addGoal: AddFractionsGoal hasMembers(addGoal.fractions, 2) {fractions: addends};
 		f1: Fraction f1.name == addends[0] && f1.numerator {numerator: n1};
@@ -201,6 +206,7 @@ rule AddNumerators {
 }
 
 rule CopyDenom {
+	salience: 6;
 	when {
 		addGoal: AddFractionsGoal hasMembers(addGoal.fractions, 2) {fractions: addends};
 		f1: Fraction f1.name == addends[0] && f1.denominator {denominator: d1};

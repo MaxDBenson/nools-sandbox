@@ -5,6 +5,10 @@
 	},
 	{
 		"type": "Fraction",
+		"args": ["given1", 1, 3, "conv1", false]
+	},
+	{
+		"type": "Fraction",
 		"args": ["given2", 2, 7, "conv2", false]
 	},
 	{

@@ -208,7 +208,6 @@ it.describe("from condition", function (it) {
                 new MyValue('h'),
                 new MyValue('i'),
                 new MyValue('j')
-
             );
             return session.match().then(function () {
                 assert.equal(called, 16);

@@ -1,0 +1,50 @@
+[
+	{
+		"type": "Option",
+		"args": ["option1", [2, 10], ["opt1amnt","opt1cost","opt1norm","opt1radio"]]
+	},
+	{
+		"type": "Option",
+		"args": ["option2", [4, 12], ["opt2amnt","opt2cost","opt2norm","opt2radio"]]
+	},
+	{
+		"type": "TextInput",
+		"args": ["opt1amnt", null]
+	},
+	{
+		"type": "TextInput",
+		"args": ["opt1cost", null]
+	},
+	{
+		"type": "TextInput",
+		"args": ["opt1norm", null]
+	},
+	{
+		"type": "RadioButton",
+		"args": ["opt1radio", "pressed", null]
+	},
+	{
+		"type": "TextInput",
+		"args": ["opt2amnt", null]
+	},
+	{
+		"type": "TextInput",
+		"args": ["opt2cost", null]
+	},
+	{
+		"type": "TextInput",
+		"args": ["opt2norm", null]
+	},
+	{
+		"type": "RadioButton",
+		"args": ["opt2radio", "pressed", null]
+	},
+	{
+		"type": "TextInput",
+		"args": ["commonAmntInput", null]
+	},
+	{
+		"type": "Problem",
+		"args": [false, false, true, false, "commonAmntInput"]
+	}
+]

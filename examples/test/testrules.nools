@@ -1,0 +1,112 @@
+define ArrayFact {
+	array: null,
+	constructor: function(a) {
+		this.array = a;
+	}
+}
+
+define Person {
+	name: null,
+	width: null,
+	height: null,
+	friends: null,
+	constructor: function(n, w, h, f) {
+		this.name = n;
+		this.width = w;
+		this.height = h;
+		this.friends = f
+	}
+}
+
+define BoringFact {
+	value: "",
+	nestedFact: null,
+	constructor: function(v, nf) {
+		this.value = v;
+		this.nestedFact = nf;
+	}
+}
+
+rule CheckArray {
+	when {
+		or(
+			arr: ArrayFact 'entry' in arr.array,
+		   	arr: ArrayFact 'entry' in arr.array,
+			arr: ArrayFact 'entry' in arr.array
+		);
+	}
+	then {
+		console.log("Found an Entry");
+	}
+}
+
+rule OrTest {
+	when {
+		p: Person p.height > 5 || p.width > 5;
+	}
+	then {
+		console.log("Got a person: "+p.name);
+	}
+}
+
+rule DorTest {
+	when {
+		p: Person p.height < 100 || p.width < 100;
+	}
+	then {
+		console.log("Got a perpon: "+p.name);
+	}
+}
+
+rule FromTest {
+	when {
+		p: Person;
+		friend: String friend from p.friends
+	}
+	then {
+		console.log(p.name+" has a friend named: "+friend);
+		retract(p);
+	}
+}
+
+rule sameFactTest{
+	when {
+		p: Person p.height > 1 {name: pName};
+		p2: Person p2.height > 2 {name: p2Name};
+	}
+	then {
+		console.log(pName+" and "+p2Name+" are tall");
+	}
+}
+
+rule ReassertInitialTest {
+	when {
+		f: BoringFact f.value == "fact";
+	}
+	then {
+		console.log("wow that's a boring fact");
+		reassertInitial();
+	}
+}
+
+rule bootstrap {
+	when {
+		p: Person;
+	}
+	then {
+		var nestedFact = new BoringFact("inner");
+		var outerFact = new BoringFact("outer", nestedFact);
+		assert(nestedFact);
+		assert(outerFact);
+	}
+}
+
+rule factInFactTest {
+	when {
+		f: BoringFact {nestedFact: nf};
+		v: BoringFact v==nf;
+	}
+	then {
+		console.log("it works!");
+	}
+}

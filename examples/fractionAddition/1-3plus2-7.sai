@@ -5,11 +5,6 @@
 		"input": 21
 	},
 	{
-		"selection": "conv2denom", 
-		"action": "updateTextField",
-		"input": 21
-	},
-	{
 		"selection": "conv1numer", 
 		"action": "updateTextField",
 		"input": 7
@@ -33,5 +28,10 @@
 		"selection": "doneBtn",
 		"action": "click",
 		"input": 1
+	},
+	{
+		"selection": "conv2denom", 
+		"action": "updateTextField",
+		"input": 21
 	}
 ]
