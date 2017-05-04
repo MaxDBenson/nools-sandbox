@@ -1,0 +1,35 @@
+define Person {
+	name: null,
+	age: null,
+	height: null,
+	weight: null,
+	friends: null,
+	constructor: function(n, a, h, w) {
+		this.name = n;
+		this.age = a;
+		this.height = h;
+		this.weight = w;
+		this.friends = [];
+	}
+}
+
+rule Nobody {
+	when {
+		not(p: Person);
+	}
+	then {
+		console.log("Where is everybody?");
+		var per = new Person("George", 10, 50, 500);
+		assert(per);
+	}
+}
+
+rule TallPerson {
+	when {
+		p: Person p.height > 6;
+	}
+	then {
+		console.log(p.name+" sure is tall");
+		backtrack();
+	}
+}

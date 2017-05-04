@@ -4,8 +4,6 @@
 var fs = require('fs');
 var nools = require('../');
 
-var haveReasserted = false;
-
 var events = {	
 	"assert": (f, t) => {
 		log("assert", "FACT ASSERTED, type "+t+": " + JSON.stringify(f))
@@ -14,11 +12,6 @@ var events = {
 		log("modify", "FACT MODIFIED, type "+t+": " + JSON.stringify(f));
 	},
 	"retract": (f) => {
-		if (!haveReasserted)
-		{
-			sessionGlobal.assert(f);
-			haveReasserted = true;
-		}
 		log("retract", "FACT RETRACTED: "+JSON.stringify(f));
 	},
 	"fire": (name, rule) => {
@@ -48,6 +41,25 @@ function checkSAI(sai1, sai2)
 	log('sai_check', '');
 	
 	return ret;
+}
+
+function myModify(fact, property, value) 
+{
+	sessionGlobal.pushUndo("modify", fact, property);
+	fact[property] = value;
+	sessionGlobal.modify(fact);
+}
+
+function myAssert(fact) 
+{
+	sessionGlobal.assert(fact);
+	sessionGlobal.pushUndo("assert", fact);
+}
+
+function myRetract(fact)
+{
+	sessionGlobal.pushUndo("retract", fact);
+	sessionGlobal.retract(fact);
 }
 
 function parseFacts(facts) {
@@ -80,9 +92,22 @@ function parseSAIs(sais) {
 	return initSAIs;
 }
 
+function backtrack() {
+	console.log("backtracking...");
+	var stateObj = sessionGlobal.stateStack.pop();
+	stateObj && sessionGlobal.runUndo(stateObj);
+}
+
 function execFlow(facts, optSAIs) {
-	var session = sessionGlobal = flow.getSession();
 	
+	var session = sessionGlobal = flow.getSession();
+
+	session.setLogFlag("agenda_insert");
+	session.setLogFlag("agenda_remove");
+	session.setLogFlag("activation_fire");
+	
+	session.pushState();
+
 	//set up listeners
 	for (let e in events)
 	{
@@ -94,13 +119,9 @@ function execFlow(facts, optSAIs) {
 	
 	//get session and assert facts
 	facts.forEach(function(fact) {
-		console.log("asserting fact: "+fact);
 		session.assert(fact);
 	});
-/*	
-	console.log("Printing session: ");
-	session.print();
-*/
+	
 	//start matchin
 	console.log('\nStarting Rule Execution...\n');
 	if (optSAIs)
@@ -135,6 +156,7 @@ function assertNextSAI(session, sais) {
 function listen(session, e, f)
 {
 	session.on(e, f);
+	session.setLogFlag("activation_fire");
 }
 
 function reassertInitial() 
@@ -150,15 +172,15 @@ var args = process.argv.slice(2),
 	factFile,
 	saiFile;
 
-if (args.length < 2)
+if (args.length < 1)
 {
-	console.log('Usage: node run.js <rulefile.nools> <factFile> [SAIFile] [-l[assert][retract][modify][fire][sai_check][sai_assert]]');
+	console.log('Usage: node run.js <rulefile.nools> [factFile] [SAIFile] [-l[assert][retract][modify][fire][sai_check][sai_assert]]');
 	process.exit();
 }
 
 ruleFile = args[0];
-factFile = args[1].includes(".wme") ? args[1] : null;
-saiFile = factFile ? args[2] : (args[1].includes(".sai") ? args[1] : null);
+factFile = args[1] && args[1].includes(".wme") ? args[1] : null;
+saiFile = factFile ? args[2] : (args[1] && args[1].includes(".sai") ? args[1] : null);
 
 let i = args.indexOf('-l');
 if (i > -1)
@@ -170,7 +192,12 @@ if (i > -1)
 }
 
 //get nools flow
-flow = nools.compile(ruleFile, {scope: {checkSAI: checkSAI, reassertInitial: reassertInitial}});
+flow = nools.compile(ruleFile, {scope: {checkSAI: checkSAI,
+					reassertInitial: reassertInitial,
+					modify: myModify,
+					assert: myAssert,
+					retract: myRetract,
+					backtrack: backtrack}});
 
 var gotFacts = function(err, data) {
 	if (err) throw err

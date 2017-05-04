@@ -27,34 +27,22 @@ define BoringFact {
 	}
 }
 
-rule CheckArray {
+rule TallPerson {
 	when {
-		or(
-			arr: ArrayFact 'entry' in arr.array,
-		   	arr: ArrayFact 'entry' in arr.array,
-			arr: ArrayFact 'entry' in arr.array
-		);
+		p: Person p.height > 5;
 	}
 	then {
-		console.log("Found an Entry");
+		console.log("Got a tall person: "+p.name);
 	}
 }
 
-rule OrTest {
+rule Grow {
 	when {
-		p: Person p.height > 5 || p.width > 5;
+		p: Person p.height <= 5;
 	}
 	then {
-		console.log("Got a person: "+p.name);
-	}
-}
-
-rule DorTest {
-	when {
-		p: Person p.height < 100 || p.width < 100;
-	}
-	then {
-		console.log("Got a perpon: "+p.name);
+		console.log(p.name + " needs to grow!");
+		modify(p, "height", p.height+1);
 	}
 }
 
@@ -69,26 +57,6 @@ rule FromTest {
 	}
 }
 
-rule sameFactTest{
-	when {
-		p: Person p.height > 1 {name: pName};
-		p2: Person p2.height > 2 {name: p2Name};
-	}
-	then {
-		console.log(pName+" and "+p2Name+" are tall");
-	}
-}
-
-rule ReassertInitialTest {
-	when {
-		f: BoringFact f.value == "fact";
-	}
-	then {
-		console.log("wow that's a boring fact");
-		reassertInitial();
-	}
-}
-
 rule bootstrap {
 	when {
 		p: Person;
@@ -98,15 +66,5 @@ rule bootstrap {
 		var outerFact = new BoringFact("outer", nestedFact);
 		assert(nestedFact);
 		assert(outerFact);
-	}
-}
-
-rule factInFactTest {
-	when {
-		f: BoringFact {nestedFact: nf};
-		v: BoringFact v==nf;
-	}
-	then {
-		console.log("it works!");
 	}
 }

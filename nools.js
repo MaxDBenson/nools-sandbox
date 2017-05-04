@@ -25,7 +25,123 @@
 
 },{"../":2}],2:[function(require,module,exports){
 module.exports = exports = require("./lib");
-},{"./lib":15}],3:[function(require,module,exports){
+},{"./lib":16}],3:[function(require,module,exports){
+"use strict";
+var declare = require("declare.js"),
+    LinkedList = require("./linkedList"),
+    InitialFact = require("./pattern").InitialFact,
+    id = 0;
+
+var Fact = declare({
+
+    instance: {
+        constructor: function (obj) {
+            this.object = obj;
+            this.recency = 0;
+            this.id = id++;
+		},
+
+        equals: function (fact) {
+            return fact === this.object;
+        },
+
+        hashCode: function () {
+            return this.id;
+        }
+    }
+
+}).as(exports, "Fact");
+
+declare({
+
+    instance: {
+
+        constructor: function () {
+            this.recency = 0;
+            this.facts = new LinkedList();
+        },
+
+        dispose: function () {
+            this.facts.clear();
+        },
+
+        getFacts: function () {
+            var head = {next: this.facts.head}, ret = [], i = 0, val;
+            while ((head = head.next)) {
+                if (!((val = head.data.object)  instanceof InitialFact)) {
+                    ret[i++] = val;
+                }
+            }
+            return ret;
+        },
+
+        getFactsByType: function (Type) {
+            var head = {next: this.facts.head}, ret = [], i = 0;
+            while ((head = head.next)) {
+                var val = head.data.object;
+                if (!(val  instanceof InitialFact) && (val instanceof Type || val.constructor === Type)) {
+                    ret[i++] = val;
+                }
+            }
+            return ret;
+        },
+
+        getFactHandle: function (o) {
+            var head = {next: this.facts.head}, ret;
+            while ((head = head.next)) {
+                var existingFact = head.data;
+                if (existingFact.equals(o)) {
+                    return existingFact;
+                }
+            }
+            if (!ret) {
+                ret = new Fact(o);
+                ret.recency = this.recency++;
+                //this.facts.push(ret);
+            }
+            return ret;
+        },
+
+        modifyFact: function (fact) {
+            var head = {next: this.facts.head};
+            while ((head = head.next)) {
+                var existingFact = head.data;
+                if (existingFact.equals(fact)) {
+                    existingFact.recency = this.recency++;
+                    return existingFact;
+                }
+            }
+            //if we made it here we did not find the fact
+            throw new Error("the fact to modify does not exist");
+        },
+
+        assertFact: function (fact) {
+            var ret = new Fact(fact);
+            ret.recency = this.recency++;
+            this.facts.push(ret);
+            return ret;
+        },
+
+        retractFact: function (fact) {
+            var facts = this.facts, head = {next: facts.head};
+            while ((head = head.next)) {
+                var existingFact = head.data;
+                if (existingFact.equals(fact)) {
+                    facts.remove(head);
+                    return existingFact;
+                }
+            }
+            //if we made it here we did not find the fact
+            throw new Error("the fact to remove does not exist");
+
+
+        }
+    }
+
+}).as(exports, "WorkingMemory");
+
+
+},{"./linkedList":17,"./pattern":54,"declare.js":60}],4:[function(require,module,exports){
 "use strict";
 var extd = require("./extended"),
     declare = extd.declare,
@@ -140,8 +256,11 @@ module.exports = declare(EventEmitter, {
             }
             if (!this.getFocusedAgenda().isEmpty()) {
                 var activation = this.pop();
-                this.emit("fire", activation.rule.name, activation.match.factHash);
-                var fired = activation.rule.fire(this.flow, activation.match);
+                
+				this.printObj(activation.match.factHash, 0);
+				
+				this.emit("fire", activation.rule.name, activation.match.factHash);
+				var fired = activation.rule.fire(this.flow, activation.match);
                 if (isPromise(fired)) {
                     ret = fired.then(function () {
                         //return true if an activation fired
@@ -159,7 +278,8 @@ module.exports = declare(EventEmitter, {
 		*	remove and return next activation on the focused agenda
 		*/
         pop: function () {
-            var tree = this.getFocusedAgenda(), root = tree.__root;
+			var tree = this.getFocusedAgenda(), root = tree.__root;
+			
             while (root.right) {
                 root = root.right;
             }
@@ -168,7 +288,8 @@ module.exports = declare(EventEmitter, {
             var rule = this.rules[v.name];
             rule.tree.remove(v);
             rule.factTable.remove(v);
-            return v;
+            
+			return v;
         },
 		
 		/**
@@ -203,6 +324,7 @@ module.exports = declare(EventEmitter, {
 		*	@param insert the activation object to insert
 		*/
         insert: function (node, insert) {
+			
 			var rule = this.rules[node.name], nodeRule = node.rule, agendaGroup = nodeRule.agendaGroup;
             rule.tree.insert(insert);
             this.getAgendaGroup(agendaGroup).insert(insert);
@@ -230,7 +352,7 @@ module.exports = declare(EventEmitter, {
     }
 
 });
-},{"./extended":12,"events":60}],4:[function(require,module,exports){
+},{"./extended":13,"events":65}],5:[function(require,module,exports){
 /*jshint evil:true*/
 "use strict";
 var extd = require("../extended"),
@@ -305,7 +427,7 @@ var createDefined = (function () {
 
 exports.createFunction = createFunction;
 exports.createDefined = createDefined;
-},{"../extended":12}],5:[function(require,module,exports){
+},{"../extended":13}],6:[function(require,module,exports){
 var Buffer=require("__browserify_Buffer").Buffer;/*jshint evil:true*/
 "use strict";
 var extd = require("../extended"),
@@ -508,7 +630,7 @@ exports.transpile = require("./transpile").transpile;
 
 
 
-},{"../constraintMatcher.js":9,"../extended":12,"../parser":44,"../rule":49,"./common":4,"./transpile":6,"__browserify_Buffer":63}],6:[function(require,module,exports){
+},{"../constraintMatcher.js":10,"../extended":13,"../parser":50,"../rule":55,"./common":5,"./transpile":7,"__browserify_Buffer":68}],7:[function(require,module,exports){
 var Buffer=require("__browserify_Buffer").Buffer;var extd = require("../extended"),
     forEach = extd.forEach,
     indexOf = extd.indexOf,
@@ -691,7 +813,7 @@ exports.transpile = function (flowObj, options) {
 
 
 
-},{"../constraintMatcher":9,"../extended":12,"../parser":44,"./common":4,"__browserify_Buffer":63}],7:[function(require,module,exports){
+},{"../constraintMatcher":10,"../extended":13,"../parser":50,"./common":5,"__browserify_Buffer":68}],8:[function(require,module,exports){
 var map = require("./extended").map;
 
 function salience(a, b) {
@@ -707,7 +829,9 @@ function factRecency(a, b) {
 
     var i = 0;
     var aMatchRecency = a.match.recency,
-        bMatchRecency = b.match.recency, aLength = aMatchRecency.length - 1, bLength = bMatchRecency.length - 1;
+        bMatchRecency = b.match.recency,
+		aLength = aMatchRecency.length - 1,
+		bLength = bMatchRecency.length - 1;
     while (aMatchRecency[i] === bMatchRecency[i] && i < aLength && i < bLength && i++) {
     }
     var ret = aMatchRecency[i] - bMatchRecency[i];
@@ -747,7 +871,7 @@ exports.strategy = function (strats) {
         return ret;
     };
 };
-},{"./extended":12}],8:[function(require,module,exports){
+},{"./extended":13}],9:[function(require,module,exports){
 "use strict";
 
 var extd = require("./extended"),
@@ -1009,7 +1133,7 @@ Constraint.extend({
 
 
 
-},{"./constraintMatcher":9,"./extended":12}],9:[function(require,module,exports){
+},{"./constraintMatcher":10,"./extended":13}],10:[function(require,module,exports){
 "use strict";
 
 var extd = require("./extended"),
@@ -1488,7 +1612,7 @@ exports.getIdentifiers = function (constraint) {
 exports.getIndexableProperties = function (constraint) {
     return lang.getIndexableProperties(constraint);
 };
-},{"./constraint":8,"./extended":12}],10:[function(require,module,exports){
+},{"./constraint":9,"./extended":13}],11:[function(require,module,exports){
 "use strict";
 var extd = require("./extended"),
     isBoolean = extd.isBoolean,
@@ -1628,7 +1752,7 @@ var Context = declare({
 
 
 
-},{"./extended":12}],11:[function(require,module,exports){
+},{"./extended":13}],12:[function(require,module,exports){
 var extd = require("./extended"),
     Promise = extd.Promise,
     nextTick = require("./nextTick"),
@@ -1656,11 +1780,11 @@ Promise.extend({
         },
 
         onAlter: function () {
-            this.flowAltered = true;
+			this.flowAltered = true;
             if (!this.looping && this.matchUntilHalt && !this.__halted) {
                 this.callNext();
             }
-        },
+		},
 
         setup: function () {
             var flow = this.flow;
@@ -1678,7 +1802,8 @@ Promise.extend({
         },
 
         __handleAsyncNext: function (next) {
-            var self = this, agenda = self.agenda;
+			
+			var self = this, agenda = self.agenda;
             return next.then(function () {
                 self.looping = false;
                 if (!agenda.isEmpty()) {
@@ -1699,7 +1824,8 @@ Promise.extend({
         },
 
         __handleSyncNext: function (next) {
-            this.looping = false;
+            
+			this.looping = false;
             if (!this.agenda.isEmpty()) {
                 if (this.flowAltered) {
                     this.rootNode.incrementCounter();
@@ -1733,7 +1859,7 @@ Promise.extend({
         }
     }
 }).as(module);
-},{"./extended":12,"./nextTick":17}],12:[function(require,module,exports){
+},{"./extended":13,"./nextTick":22}],13:[function(require,module,exports){
 var arr = require("array-extended"),
     unique = arr.unique,
     indexOf = arr.indexOf,
@@ -1884,22 +2010,24 @@ module.exports = require("extended")()
     .register("LinkedList", require("./linkedList"));
 
 
-},{"./linkedList":16,"array-extended":52,"date-extended":53,"declare.js":55,"extended":56,"function-extended":59,"ht":65,"is-extended":66,"leafy":67,"object-extended":68,"promise-extended":69,"string-extended":70}],13:[function(require,module,exports){
+},{"./linkedList":17,"array-extended":57,"date-extended":58,"declare.js":60,"extended":61,"function-extended":64,"ht":70,"is-extended":71,"leafy":72,"object-extended":73,"promise-extended":74,"string-extended":75}],14:[function(require,module,exports){
 "use strict";
 var extd = require("./extended"),
     bind = extd.bind,
     declare = extd.declare,
     nodes = require("./nodes"),
     EventEmitter = require("events").EventEmitter,
-    wm = require("./workingMemory"),
+    wm = require("./myWorkingMemory"),
     WorkingMemory = wm.WorkingMemory,
     ExecutionStragegy = require("./executionStrategy"),
-    AgendaTree = require("./agenda");
+    AgendaTree = require("./myAgenda");
 
 module.exports = declare(EventEmitter, {
 
     instance: {
 
+		firstFact: null,
+	
         name: null,
 
         executionStrategy: null,
@@ -1917,7 +2045,7 @@ module.exports = declare(EventEmitter, {
             extd.bindAll(this, "halt", "assert", "retract", "modify", "focus",
               "emit", "getFacts", "getFact");
         },
-
+		
         getFacts: function (Type) {
             var ret;
             if (Type) {
@@ -1955,7 +2083,7 @@ module.exports = declare(EventEmitter, {
         },
 
         assert: function (fact) {
-            this.rootNode.assertFact(this.workingMemory.assertFact(fact));
+			this.rootNode.assertFact(this.workingMemory.assertFact(fact));
             this.emit("assert", fact);
             return fact;
         },
@@ -1999,10 +2127,9 @@ module.exports = declare(EventEmitter, {
         match: function (cb) {
             return (this.executionStrategy = new ExecutionStragegy(this)).execute().classic(cb).promise();
         }
-
     }
 });
-},{"./agenda":3,"./executionStrategy":11,"./extended":12,"./nodes":27,"./workingMemory":50,"events":60}],14:[function(require,module,exports){
+},{"./executionStrategy":12,"./extended":13,"./myAgenda":19,"./myWorkingMemory":21,"./nodes":32,"events":65}],15:[function(require,module,exports){
 /*
 	From what I can tell, this class acts as a sort-of flow factory (sort-of b/c there's still 1-1 correspondence b/w a flowContainer
 	and a flow).  A flow is a set of instanciated rules (i.e. a Rete).  This class translates rule declarations into rule objects 
@@ -2017,7 +2144,7 @@ var extd = require("./extended"),
     conflictStrategies = require("./conflict"),
     conflictResolution = conflictStrategies.strategy(["salience", "activationRecency"]),
     rule = require("./rule"),
-    Flow = require("./flow");
+    Flow = require("./myFlow");
 
 var flows = {};
 var FlowContainer = declare({
@@ -2059,7 +2186,7 @@ var FlowContainer = declare({
             return cls;
         },
 		
-		//Create a new Rule object and add it to the rule list
+		//Create a new list of Rule objects and add it to the rule list
         rule: function () {
             this.__rules = this.__rules.concat(rule.createRule.apply(rule, arguments));
             return this;
@@ -2067,7 +2194,7 @@ var FlowContainer = declare({
 		
 		//Initialize a new Flow object and assert each rule on the list (build the Rete)
         getSession: function () {
-            var flow = new Flow(this.name, this.conflictResolutionStrategy);
+            var flow = new Flow(this.name, this.conflictResolutionStrategy, this.__defined);
             forEach(this.__rules, function (rule) {
                 flow.rule(rule);
             });
@@ -2119,7 +2246,7 @@ var FlowContainer = declare({
     }
 
 }).as(module);
-},{"./conflict":7,"./extended":12,"./flow":13,"./pattern":48,"./rule":49}],15:[function(require,module,exports){
+},{"./conflict":8,"./extended":13,"./myFlow":20,"./pattern":54,"./rule":55}],16:[function(require,module,exports){
 /**
  *
  * @projectName nools
@@ -2194,7 +2321,7 @@ exports.transpile = function (file, options) {
 };
 
 exports.parse = parse;
-},{"./compile":5,"./extended":12,"./flowContainer":14,"fs":61,"path":62}],16:[function(require,module,exports){
+},{"./compile":6,"./extended":13,"./flowContainer":15,"fs":66,"path":67}],17:[function(require,module,exports){
 var declare = require("declare.js");
 declare({
 
@@ -2276,7 +2403,308 @@ declare({
 
 }).as(module);
 
-},{"declare.js":55}],17:[function(require,module,exports){
+},{"declare.js":60}],18:[function(require,module,exports){
+var extd = require("./extended"),
+	declare = extd.declare;
+
+module.exports = declare({
+	
+	instance: {
+		flags: null,
+		
+		constructor: function(toSet) {
+			this.flags = {};
+			if (toSet)
+			{
+				if (typeof toSet !== "array") {
+					toSet = [toSet];
+				}
+				toSet.forEach(function(flag) {
+					this.set(flag);
+				});
+			}
+		},
+		
+		isSet: function(flag) {
+			return !!this.flags[flag];
+		},
+		
+		set: function(flag) {
+			this.flags[flag] = true;
+		},
+		
+		unset: function(flag) {
+			this.flags[flag] = false;
+		},
+		
+		log: function(flag, msg) {
+			if (this.flags[flag]) {
+				console.log(msg);
+			}
+		}
+	}
+});
+},{"./extended":13}],19:[function(require,module,exports){
+"use strict";
+var extd = require("./extended"),
+    declare = extd.declare,
+    isPromise = extd.isPromiseLike,
+	Super = require("./agenda");
+
+var DEFAULT_AGENDA_GROUP = "main";
+module.exports = declare(Super, {
+
+    instance: {
+
+		/**
+		*	Fire next activation on the focused agenda
+		**/
+        fireNext: function () {
+            var agendaGroupStack = this.agendaGroupStack, ret = false;
+            while (this.getFocusedAgenda().isEmpty() && this.getFocused() !== DEFAULT_AGENDA_GROUP) {
+                agendaGroupStack.pop();
+            }
+            if (!this.getFocusedAgenda().isEmpty()) {
+                var activation = this.pop();
+                
+				//save rest of agenda
+				
+				this.flow.log("activation_fire", "\n activation for rule: "+activation.rule.name+" with hashCode: "+activation.hashCode);
+				this.flow.log("activation_fire", "");
+				this.printObj(activation.match.factHash, 0, null, "activation_fire");
+				this.flow.log("activation_fire", "");
+				
+				this.emit("fire", activation.rule.name, activation.match.factHash);
+				var fired = activation.rule.fire(this.flow, activation.match);
+                
+				if (isPromise(fired)) {
+                    ret = fired.then(function () {
+                        //return true if an activation fired
+                        return true;
+                    });
+                } else {
+                    ret = true;
+                }
+            }
+            //return false if activation not fired
+            return ret;
+        },
+		
+		/**
+		*	Add a new activation to the agenda
+		*	@param node the terminal node which caused the activation
+		*	@param insert the activation object to insert
+		*/
+        insert: function (node, insert) {
+			
+			this.flow.log('agenda_insert', 'agenda insert - name: '+insert.name);
+			//emit event here too?
+			
+			var rule = this.rules[node.name], nodeRule = node.rule, agendaGroup = nodeRule.agendaGroup;
+            rule.tree.insert(insert);
+            this.getAgendaGroup(agendaGroup).insert(insert);
+            if (nodeRule.autoFocus) {
+                this.setFocus(agendaGroup);
+            }
+
+            rule.factTable.insert(insert);
+        },
+
+        dispose: function () {
+            for (var i in this.agendaGroups) {
+                this.agendaGroups[i].clear();
+            }
+            var rules = this.rules;
+            for (i in rules) {
+                if (i in rules) {
+                    rules[i].tree.clear();
+                    rules[i].factTable.clear();
+
+                }
+            }
+            this.rules = {};
+        },
+		
+		/**
+		*	Print out an object in semi-readable form
+		*	Should probably be moved to some more generic utility class
+		*/
+		printObj: function(obj, indent, objName, flag, maxDepth)
+		{
+			if (!this.flow.getLogFlagSet(flag)) {
+				return;
+			}
+			maxDepth = (maxDepth && !isNaN(maxDepth) && maxDepth > 0) ? maxDepth : 5;
+			objName = objName || "object";
+			var tabStr = '';
+			for (var i = 0; i < indent; i++) {
+				tabStr += '-->';
+			}
+			for (var p in obj)
+			{
+				if (obj.hasOwnProperty(p))
+				{
+					var type = typeof(obj[p]);
+					this.flow.log(flag, tabStr+objName+"["+p+"] ("+type+") : "+(type !== "object" ? obj[p] : ""));
+					if (typeof obj[p] === "object" && maxDepth > 0) {
+						this.printObj(obj[p], indent+1, p, flag, maxDepth-1);
+					}
+				}
+			}
+		}
+    }
+
+});
+},{"./agenda":4,"./extended":13}],20:[function(require,module,exports){
+"use strict";
+var extd = require("./extended"),
+    declare = extd.declare,
+	Flow = require("./flow"),
+	InitialFact = require("./pattern").InitialFact,
+	Logger = require("./log");
+
+module.exports = declare(Flow, {
+
+    instance: {
+
+		firstFact: null,
+		logger: null,
+		types: null,
+
+        constructor: function (name, conflictResolutionStrategy, types) {
+            
+			this._super(arguments);
+			
+			this.logger = new Logger();
+			this.types = types;
+        },
+		
+		getLogFlagSet: function(flag) {
+			return this.logger.isSet(flag);
+		},
+		
+		setLogFlag: function(flag) {
+			this.logger.set(flag);
+		},
+		
+		unsetLogFlag: function(flag) {
+			this.logger.unset(flag);
+		},
+		
+		log: function(flag, msg) {
+			this.logger.log(flag, msg);
+		},
+
+        assert: function (fact) {
+            if (fact instanceof InitialFact)
+			{
+				this.firstFact = fact;
+			}
+			this.rootNode.assertFact(this.workingMemory.assertFact(fact));
+            this.emit("assert", fact, this.getFactType(fact));
+            return fact;
+        },
+
+        // This method is called to remove an existing fact from working memory
+        retract: function (fact) {
+            //fact = this.workingMemory.getFact(fact);
+            this.rootNode.retractFact(this.workingMemory.retractFact(fact));
+            this.emit("retract", fact, this.getFactType(fact));
+            return fact;
+        },
+
+        // This method is called to alter an existing fact.  It is essentially a
+        // retract followed by an assert.
+        modify: function (fact, cb) {
+            //fact = this.workingMemory.getFact(fact);
+            if ("function" === typeof cb) {
+                cb.call(fact, fact);
+            }
+            this.rootNode.modifyFact(this.workingMemory.modifyFact(fact));
+            this.emit("modify", fact, this.getFactType(fact));
+            return fact;
+        },
+		
+		reassertInitial: function() {
+			this.retract(this.firstFact);
+			this.assert(this.firstFact);
+		},
+		
+		getFactType: function(fact) {
+			var type = typeof fact;
+			if (type === "object")
+			{
+				type = null;
+				if (fact instanceof Array) {
+					type = "Array";
+				} else if (fact instanceof RegExp) {
+					type = "RegExp";
+				} else if (fact instanceof Date) {
+					type = "Date";
+				} else {
+					for (let t in this.types)
+					{
+						if (this.types.hasOwnProperty(t) && this.types[t] === fact.constructor)
+						{
+							type = t;
+							break;
+						}
+					}
+				}
+			}
+			return type;
+		}
+    }
+});
+},{"./extended":13,"./flow":14,"./log":18,"./pattern":54}],21:[function(require,module,exports){
+"use strict";
+var declare = require("declare.js"),
+    Super = require("./WorkingMemory"),
+	id = 0;
+	
+
+var Fact = declare(Super.Fact, {
+
+    instance: {
+        constructor: function (obj, optId) {
+			this._super(arguments);
+            this.id = optId || (obj.name || id++);
+		}
+    }
+
+});
+
+declare(Super.WorkingMemory, {
+
+    instance: {
+		assertFact: function (fact) {
+            var ret = new Fact(fact);
+            ret.recency = this.recency++;
+            this.facts.push(ret);
+            return ret;
+        },
+
+        getFactHandle: function (o, optId) {
+            var head = {next: this.facts.head}, ret;
+            while ((head = head.next)) {
+                var existingFact = head.data;
+                if (existingFact.equals(o)) {
+                    return existingFact;
+                }
+            }
+            if (!ret) {
+                ret = new Fact(o, optId);
+                ret.recency = this.recency++;
+                //this.facts.push(ret);
+            }
+            return ret;
+        }
+    }
+
+}).as(exports, "WorkingMemory");
+
+
+},{"./WorkingMemory":3,"declare.js":60}],22:[function(require,module,exports){
 var process=require("__browserify_process");/*global setImmediate, window, MessageChannel*/
 var extd = require("./extended");
 var nextTick;
@@ -2314,7 +2742,7 @@ if (typeof setImmediate === "function") {
 }
 
 module.exports = nextTick;
-},{"./extended":12,"__browserify_process":64}],18:[function(require,module,exports){
+},{"./extended":13,"__browserify_process":69}],23:[function(require,module,exports){
 var Node = require("./node"),
     intersection = require("../extended").intersection;
 
@@ -2349,7 +2777,7 @@ Node.extend({
         }
     }
 }).as(module);
-},{"../extended":12,"./node":37}],19:[function(require,module,exports){
+},{"../extended":13,"./node":43}],24:[function(require,module,exports){
 var AlphaNode = require("./alphaNode");
 
 AlphaNode.extend({
@@ -2381,7 +2809,7 @@ AlphaNode.extend({
         }
     }
 }).as(module);
-},{"./alphaNode":20}],20:[function(require,module,exports){
+},{"./alphaNode":25}],25:[function(require,module,exports){
 "use strict";
 var Node = require("./node");
 
@@ -2402,7 +2830,7 @@ Node.extend({
         }
     }
 }).as(module);
-},{"./node":37}],21:[function(require,module,exports){
+},{"./node":43}],26:[function(require,module,exports){
 var extd = require("../extended"),
     keys = extd.hash.keys,
     Node = require("./node"),
@@ -2658,7 +3086,7 @@ Node.extend({
     }
 
 }).as(module);
-},{"../extended":12,"./misc/leftMemory":32,"./misc/rightMemory":34,"./node":37}],22:[function(require,module,exports){
+},{"../extended":13,"./misc/leftMemory":37,"./misc/rightMemory":39,"./node":43}],27:[function(require,module,exports){
 var AlphaNode = require("./alphaNode");
 
 AlphaNode.extend({
@@ -2701,7 +3129,7 @@ AlphaNode.extend({
         }
     }
 }).as(module);
-},{"./alphaNode":20}],23:[function(require,module,exports){
+},{"./alphaNode":25}],28:[function(require,module,exports){
 var FromNotNode = require("./fromNotNode"),
     extd = require("../extended"),
     Context = require("../context"),
@@ -2801,7 +3229,7 @@ FromNotNode.extend({
 
     }
 }).as(module);
-},{"../context":10,"../extended":12,"./fromNotNode":26}],24:[function(require,module,exports){
+},{"../context":11,"../extended":13,"./fromNotNode":31}],29:[function(require,module,exports){
 var NotNode = require("./notNode"),
     LinkedList = require("../linkedList");
 
@@ -2975,7 +3403,7 @@ NotNode.extend({
         }
     }
 }).as(module);
-},{"../linkedList":16,"./notNode":38}],25:[function(require,module,exports){
+},{"../linkedList":17,"./notNode":44}],30:[function(require,module,exports){
 var JoinNode = require("./joinNode"),
     extd = require("../extended"),
     constraint = require("../constraint"),
@@ -3190,7 +3618,7 @@ JoinNode.extend({
 
     }
 }).as(module);
-},{"../constraint":8,"../context":10,"../extended":12,"./joinNode":28}],26:[function(require,module,exports){
+},{"../constraint":9,"../context":11,"../extended":13,"./joinNode":33}],31:[function(require,module,exports){
 var JoinNode = require("./joinNode"),
     extd = require("../extended"),
     constraint = require("../constraint"),
@@ -3350,7 +3778,7 @@ JoinNode.extend({
 
     }
 }).as(module);
-},{"../constraint":8,"../context":10,"../extended":12,"./joinNode":28}],27:[function(require,module,exports){
+},{"../constraint":9,"../context":11,"../extended":13,"./joinNode":33}],32:[function(require,module,exports){
 /**
 	Defines the "RootNode" symbol, which I guess acts as the entry point to the Rete network.
 	Pretty sure all rule and fact assertions/modifications/retractions come through here.
@@ -3378,7 +3806,7 @@ var extd = require("../extended"),
     JoinNode = require("./joinNode"),
     BetaNode = require("./betaNode"),
     NotNode = require("./notNode"),
-    FromNode = require("./fromNode"),
+    FromNode = require("./myFromNode"),
     FromNotNode = require("./fromNotNode"),
     ExistsNode = require("./existsNode"),
     ExistsFromNode = require("./existsFromNode"),
@@ -3629,7 +4057,7 @@ declare({
 
 
 
-},{"../constraint":8,"../extended":12,"../pattern.js":48,"./aliasNode":19,"./betaNode":21,"./equalityNode":22,"./existsFromNode":23,"./existsNode":24,"./fromNode":25,"./fromNotNode":26,"./joinNode":28,"./leftAdapterNode":30,"./notNode":38,"./propertyNode":39,"./rightAdapterNode":40,"./terminalNode":41,"./typeNode":42}],28:[function(require,module,exports){
+},{"../constraint":9,"../extended":13,"../pattern.js":54,"./aliasNode":24,"./betaNode":26,"./equalityNode":27,"./existsFromNode":28,"./existsNode":29,"./fromNotNode":31,"./joinNode":33,"./leftAdapterNode":35,"./myFromNode":42,"./notNode":44,"./propertyNode":45,"./rightAdapterNode":46,"./terminalNode":47,"./typeNode":48}],33:[function(require,module,exports){
 var BetaNode = require("./betaNode"),
     JoinReferenceNode = require("./joinReferenceNode");
 
@@ -3691,7 +4119,7 @@ BetaNode.extend({
     }
 
 }).as(module);
-},{"./betaNode":21,"./joinReferenceNode":29}],29:[function(require,module,exports){
+},{"./betaNode":26,"./joinReferenceNode":34}],34:[function(require,module,exports){
 var Node = require("./node"),
     constraints = require("../constraint"),
     ReferenceEqualityConstraint = constraints.ReferenceEqualityConstraint;
@@ -3800,7 +4228,7 @@ Node.extend({
     }
 
 }).as(module);
-},{"../constraint":8,"./node":37}],30:[function(require,module,exports){
+},{"../constraint":9,"./node":43}],35:[function(require,module,exports){
 var Node = require("./adapterNode");
 
 Node.extend({
@@ -3835,7 +4263,7 @@ Node.extend({
     }
 
 }).as(module);
-},{"./adapterNode":18}],31:[function(require,module,exports){
+},{"./adapterNode":23}],36:[function(require,module,exports){
 exports.getMemory = (function () {
 
     var pPush = Array.prototype.push, NPL = 0, EMPTY_ARRAY = [], NOT_POSSIBLES_HASH = {}, POSSIBLES_HASH = {}, PL = 0;
@@ -3987,7 +4415,7 @@ exports.getMemory = (function () {
         return mergePossiblesAndNotPossibles(ret, rl);
     };
 }());
-},{}],32:[function(require,module,exports){
+},{}],37:[function(require,module,exports){
 var Memory = require("./memory");
 
 Memory.extend({
@@ -4000,7 +4428,7 @@ Memory.extend({
     }
 
 }).as(module);
-},{"./memory":33}],33:[function(require,module,exports){
+},{"./memory":38}],38:[function(require,module,exports){
 var extd = require("../../extended"),
     plucker = extd.plucker,
     declare = extd.declare,
@@ -4139,7 +4567,7 @@ declare({
     }
 
 }).as(module);
-},{"../../extended":12,"./helpers":31,"./table":35,"./tupleEntry":36}],34:[function(require,module,exports){
+},{"../../extended":13,"./helpers":36,"./table":40,"./tupleEntry":41}],39:[function(require,module,exports){
 var Memory = require("./memory");
 
 Memory.extend({
@@ -4152,7 +4580,7 @@ Memory.extend({
     }
 
 }).as(module);
-},{"./memory":33}],35:[function(require,module,exports){
+},{"./memory":38}],40:[function(require,module,exports){
 var extd = require("../../extended"),
     pPush = Array.prototype.push,
     HashTable = extd.HashTable,
@@ -4328,7 +4756,7 @@ AVLTree.extend({
 
     }
 }).as(module);
-},{"../../extended":12}],36:[function(require,module,exports){
+},{"../../extended":13}],41:[function(require,module,exports){
 var extd = require("../../extended"),
     indexOf = extd.indexOf;
 //    HashSet = require("./hashSet");
@@ -4375,7 +4803,83 @@ extd.declare({
         }
     }
 }).as(module);
-},{"../../extended":12}],37:[function(require,module,exports){
+},{"../../extended":13}],42:[function(require,module,exports){
+var extd = require("../extended"),
+    Context = require("../context"),
+    isDefined = extd.isDefined,
+    isArray = extd.isArray,
+	Super = require("./fromNode");
+
+var DEFAULT_MATCH = {
+    isMatch: function () {
+        return false;
+    }
+};
+
+Super.extend({
+    instance: {
+
+        __createMatches: function (context) {
+            var fh = context.factHash,
+				o = this.from(fh),
+				baseId = context.hashCode.replace(':', '-')+'-';
+			if (isArray(o)) {
+                for (var i = 0, l = o.length; i < l; i++) {
+                    this.__checkMatch(context, o[i], true, baseId+i);
+                }
+            } else if (isDefined(o)) {
+                this.__checkMatch(context, o, true, baseId+'0');
+            }
+        },
+
+        __checkMatch: function (context, o, propogate, createFactId) {
+            var newContext;
+            if ((newContext = this.__createMatch(context, o, createFactId)).isMatch() && propogate) {
+                this.__propagate("assert", newContext.clone());
+            }
+            return newContext;
+        },
+
+        __createMatch: function (lc, o, createFactId) {
+            if (this.type(o)) {
+                var createdFact = this.workingMemory.getFactHandle(o, createFactId),
+                    createdContext,
+                    rc = new Context(createdFact, null, null)
+                        .set(this.alias, o),
+                    createdFactId = createdFact.id;
+                var fh = rc.factHash, lcFh = lc.factHash;
+                for (var key in lcFh) {
+                    fh[key] = lcFh[key];
+                }
+                var eqConstraints = this.__equalityConstraints, vars = this.__variables, i = -1, l = eqConstraints.length;
+                while (++i < l) {
+                    if (!eqConstraints[i](fh, fh)) {
+                        createdContext = DEFAULT_MATCH;
+                        break;
+                    }
+                }
+                var fm = this.fromMemory[createdFactId];
+                if (!fm) {
+                    fm = this.fromMemory[createdFactId] = {};
+                }
+                if (!createdContext) {
+                    var prop;
+                    i = -1;
+                    l = vars.length;
+                    while (++i < l) {
+                        prop = vars[i];
+                        fh[prop] = o[prop];
+                    }
+                    lc.fromMatches[createdFact.id] = createdContext = rc.clone(createdFact, null, lc.match.merge(rc.match));
+                }
+                fm[lc.hashCode] = [lc, createdContext];
+                return createdContext;
+            }
+            return DEFAULT_MATCH;
+        }
+    }
+}).as(module);
+},{"../context":11,"../extended":13,"./fromNode":30}],43:[function(require,module,exports){
 var extd = require("../extended"),
     forEach = extd.forEach,
     indexOf = extd.indexOf,
@@ -4502,7 +5006,7 @@ declare({
 
 }).as(module);
 
-},{"../context":10,"../extended":12}],38:[function(require,module,exports){
+},{"../context":11,"../extended":13}],44:[function(require,module,exports){
 var JoinNode = require("./joinNode"),
     LinkedList = require("../linkedList"),
     Context = require("../context"),
@@ -4774,7 +5278,7 @@ JoinNode.extend({
         }
     }
 }).as(module);
-},{"../context":10,"../linkedList":16,"../pattern":48,"./joinNode":28}],39:[function(require,module,exports){
+},{"../context":11,"../linkedList":17,"../pattern":54,"./joinNode":33}],45:[function(require,module,exports){
 var AlphaNode = require("./alphaNode"),
     Context = require("../context"),
     extd = require("../extended");
@@ -4825,7 +5329,7 @@ AlphaNode.extend({
 
 
 
-},{"../context":10,"../extended":12,"./alphaNode":20}],40:[function(require,module,exports){
+},{"../context":11,"../extended":13,"./alphaNode":25}],46:[function(require,module,exports){
 var Node = require("./adapterNode");
 
 Node.extend({
@@ -4860,7 +5364,7 @@ Node.extend({
         }
     }
 }).as(module);
-},{"./adapterNode":18}],41:[function(require,module,exports){
+},{"./adapterNode":23}],47:[function(require,module,exports){
 /**
 *  One terminal node per rule  
 */
@@ -4938,7 +5442,7 @@ Node.extend({
         }
     }
 }).as(module);
-},{"../extended":12,"./node":37}],42:[function(require,module,exports){
+},{"../extended":13,"./node":43}],48:[function(require,module,exports){
 var AlphaNode = require("./alphaNode"),
     Context = require("../context");
 
@@ -4976,7 +5480,7 @@ AlphaNode.extend({
         },
 
         __propagate: function (method, fact) {
-            var es = this.__entrySet, i = -1, l = es.length;
+			var es = this.__entrySet, i = -1, l = es.length;
             while (++i < l) {
                 var e = es[i], outNode = e.key, paths = e.value;
                 outNode[method](new Context(fact, paths));
@@ -4986,7 +5490,7 @@ AlphaNode.extend({
 }).as(module);
 
 
-},{"../context":10,"./alphaNode":20}],43:[function(require,module,exports){
+},{"../context":11,"./alphaNode":25}],49:[function(require,module,exports){
 var process=require("__browserify_process");/* parser generated by jison 0.4.17 */
 /*
   Returns a Parser object of the following structure:
@@ -5795,7 +6299,7 @@ if (typeof module !== 'undefined' && require.main === module) {
   exports.main(process.argv.slice(1));
 }
 }
-},{"__browserify_process":64,"fs":61,"path":62}],44:[function(require,module,exports){
+},{"__browserify_process":69,"fs":66,"path":67}],50:[function(require,module,exports){
 (function () {
     "use strict";
     var constraintParser = require("./constraint/parser"),
@@ -5813,7 +6317,7 @@ if (typeof module !== 'undefined' && require.main === module) {
         return noolParser.parse(source, file);
     };
 })();
-},{"./constraint/parser":43,"./nools/nool.parser":45}],45:[function(require,module,exports){
+},{"./constraint/parser":49,"./nools/nool.parser":51}],51:[function(require,module,exports){
 "use strict";
 
 var tokens = require("./tokens.js"),
@@ -5853,7 +6357,7 @@ exports.parse = function (src, file) {
 };
 
 
-},{"../../extended":12,"./tokens.js":46,"./util.js":47}],46:[function(require,module,exports){
+},{"../../extended":13,"./tokens.js":52,"./util.js":53}],52:[function(require,module,exports){
 var process=require("__browserify_process");"use strict";
 
 var utils = require("./util.js"),
@@ -6205,7 +6709,7 @@ var topLevelTokens = {
 module.exports = topLevelTokens;
 
 
-},{"../../extended":12,"./util.js":47,"__browserify_process":64,"fs":61}],47:[function(require,module,exports){
+},{"../../extended":13,"./util.js":53,"__browserify_process":69,"fs":66}],53:[function(require,module,exports){
 var process=require("__browserify_process");"use strict";
 
 var path = require("path");
@@ -6300,7 +6804,7 @@ var findNextTokenIndex = exports.findNextTokenIndex = function (str, startIndex,
 exports.findNextToken = function (str, startIndex, endIndex) {
     return str.charAt(findNextTokenIndex(str, startIndex, endIndex));
 };
-},{"__browserify_process":64,"path":62}],48:[function(require,module,exports){
+},{"__browserify_process":69,"path":67}],54:[function(require,module,exports){
 "use strict";
 var extd = require("./extended"),
     isEmpty = extd.isEmpty,
@@ -6453,7 +6957,7 @@ ObjectPattern.extend({
 
 
 
-},{"./constraint":8,"./constraintMatcher":9,"./extended":12}],49:[function(require,module,exports){
+},{"./constraint":9,"./constraintMatcher":10,"./extended":13}],55:[function(require,module,exports){
 "use strict";
 var extd = require("./extended"),
     isArray = extd.isArray,
@@ -6787,123 +7291,7 @@ exports.createRule = createRule;
 
 
 
-},{"./extended":12,"./parser":44,"./pattern":48}],50:[function(require,module,exports){
-"use strict";
-var declare = require("declare.js"),
-    LinkedList = require("./linkedList"),
-    InitialFact = require("./pattern").InitialFact,
-    id = 0;
-
-var Fact = declare({
-
-    instance: {
-        constructor: function (obj) {
-            this.object = obj;
-            this.recency = 0;
-            this.id = id++;
-        },
-
-        equals: function (fact) {
-            return fact === this.object;
-        },
-
-        hashCode: function () {
-            return this.id;
-        }
-    }
-
-});
-
-declare({
-
-    instance: {
-
-        constructor: function () {
-            this.recency = 0;
-            this.facts = new LinkedList();
-        },
-
-        dispose: function () {
-            this.facts.clear();
-        },
-
-        getFacts: function () {
-            var head = {next: this.facts.head}, ret = [], i = 0, val;
-            while ((head = head.next)) {
-                if (!((val = head.data.object)  instanceof InitialFact)) {
-                    ret[i++] = val;
-                }
-            }
-            return ret;
-        },
-
-        getFactsByType: function (Type) {
-            var head = {next: this.facts.head}, ret = [], i = 0;
-            while ((head = head.next)) {
-                var val = head.data.object;
-                if (!(val  instanceof InitialFact) && (val instanceof Type || val.constructor === Type)) {
-                    ret[i++] = val;
-                }
-            }
-            return ret;
-        },
-
-        getFactHandle: function (o) {
-            var head = {next: this.facts.head}, ret;
-            while ((head = head.next)) {
-                var existingFact = head.data;
-                if (existingFact.equals(o)) {
-                    return existingFact;
-                }
-            }
-            if (!ret) {
-                ret = new Fact(o);
-                ret.recency = this.recency++;
-                //this.facts.push(ret);
-            }
-            return ret;
-        },
-
-        modifyFact: function (fact) {
-            var head = {next: this.facts.head};
-            while ((head = head.next)) {
-                var existingFact = head.data;
-                if (existingFact.equals(fact)) {
-                    existingFact.recency = this.recency++;
-                    return existingFact;
-                }
-            }
-            //if we made it here we did not find the fact
-            throw new Error("the fact to modify does not exist");
-        },
-
-        assertFact: function (fact) {
-            var ret = new Fact(fact);
-            ret.recency = this.recency++;
-            this.facts.push(ret);
-            return ret;
-        },
-
-        retractFact: function (fact) {
-            var facts = this.facts, head = {next: facts.head};
-            while ((head = head.next)) {
-                var existingFact = head.data;
-                if (existingFact.equals(fact)) {
-                    facts.remove(head);
-                    return existingFact;
-                }
-            }
-            //if we made it here we did not find the fact
-            throw new Error("the fact to remove does not exist");
-
-
-        }
-    }
-
-}).as(exports, "WorkingMemory");
-
-
-},{"./linkedList":16,"./pattern":48,"declare.js":55}],51:[function(require,module,exports){
+},{"./extended":13,"./parser":50,"./pattern":54}],56:[function(require,module,exports){
 (function () {
     "use strict";
 
@@ -6948,7 +7336,7 @@ declare({
 }).call(this);
 
 
-},{"extended":56,"is-extended":66}],52:[function(require,module,exports){
+},{"extended":61,"is-extended":71}],57:[function(require,module,exports){
 (function () {
     "use strict";
     /*global define*/
@@ -7618,7 +8006,7 @@ declare({
 
 
 
-},{"arguments-extended":51,"extended":56,"is-extended":66}],53:[function(require,module,exports){
+},{"arguments-extended":56,"extended":61,"is-extended":71}],58:[function(require,module,exports){
 (function () {
     "use strict";
 
@@ -8566,7 +8954,7 @@ declare({
 
 
 
-},{"array-extended":52,"extended":56,"is-extended":66}],54:[function(require,module,exports){
+},{"array-extended":57,"extended":61,"is-extended":71}],59:[function(require,module,exports){
 (function () {
 
     /**
@@ -9493,9 +9881,9 @@ declare({
 
 
 
-},{}],55:[function(require,module,exports){
+},{}],60:[function(require,module,exports){
 module.exports = require("./declare.js");
-},{"./declare.js":54}],56:[function(require,module,exports){
+},{"./declare.js":59}],61:[function(require,module,exports){
 (function () {
     "use strict";
     /*global extender is, dateExtended*/
@@ -9594,7 +9982,7 @@ module.exports = require("./declare.js");
 
 
 
-},{"extender":58}],57:[function(require,module,exports){
+},{"extender":63}],62:[function(require,module,exports){
 (function () {
     /*jshint strict:false*/
 
@@ -10135,9 +10523,9 @@ module.exports = require("./declare.js");
     }
 
 }).call(this);
-},{"declare.js":55}],58:[function(require,module,exports){
+},{"declare.js":60}],63:[function(require,module,exports){
 module.exports = require("./extender.js");
-},{"./extender.js":57}],59:[function(require,module,exports){
+},{"./extender.js":62}],64:[function(require,module,exports){
 (function () {
     "use strict";
 
@@ -10395,7 +10783,7 @@ module.exports = require("./extender.js");
 
 
 
-},{"arguments-extended":51,"extended":56,"is-extended":66}],60:[function(require,module,exports){
+},{"arguments-extended":56,"extended":61,"is-extended":71}],65:[function(require,module,exports){
 var process=require("__browserify_process");if (!process.EventEmitter) process.EventEmitter = function () {};
 
 var EventEmitter = exports.EventEmitter = process.EventEmitter;
@@ -10591,10 +10979,10 @@ EventEmitter.listenerCount = function(emitter, type) {
   return ret;
 };
 
-},{"__browserify_process":64}],61:[function(require,module,exports){
+},{"__browserify_process":69}],66:[function(require,module,exports){
 // nothing to see here... no file methods for the browser
 
-},{}],62:[function(require,module,exports){
+},{}],67:[function(require,module,exports){
 var process=require("__browserify_process");function filter (xs, fn) {
     var res = [];
     for (var i = 0; i < xs.length; i++) {
@@ -10773,7 +11161,7 @@ exports.relative = function(from, to) {
 
 exports.sep = '/';
 
-},{"__browserify_process":64}],63:[function(require,module,exports){
+},{"__browserify_process":69}],68:[function(require,module,exports){
 require=(function(e,t,n,r){function i(r){if(!n[r]){if(!t[r]){if(e)return e(r);throw new Error("Cannot find module '"+r+"'")}var s=n[r]={exports:{}};t[r][0](function(e){var n=t[r][1][e];return i(n?n:e)},s,s.exports)}return n[r].exports}for(var s=0;s<r.length;s++)i(r[s]);return i})(typeof require!=="undefined"&&require,{1:[function(require,module,exports){
 // UTILITY
 var util = require('util');
@@ -14635,7 +15023,7 @@ SlowBuffer.prototype.writeDoubleBE = Buffer.prototype.writeDoubleBE;
 },{}]},{},[])
 ;;module.exports=require("buffer-browserify")
 
-},{}],64:[function(require,module,exports){
+},{}],69:[function(require,module,exports){
 // shim for using process in browser
 
 var process = module.exports = {};
@@ -14690,7 +15078,7 @@ process.chdir = function (dir) {
     throw new Error('process.chdir is not supported');
 };
 
-},{}],65:[function(require,module,exports){
+},{}],70:[function(require,module,exports){
 (function () {
     "use strict";
 
@@ -14955,7 +15343,7 @@ process.chdir = function (dir) {
 
 
 
-},{"array-extended":52,"declare.js":55,"extended":56,"is-extended":66}],66:[function(require,module,exports){
+},{"array-extended":57,"declare.js":60,"extended":61,"is-extended":71}],71:[function(require,module,exports){
 var Buffer=require("__browserify_Buffer").Buffer;(function () {
     "use strict";
 
@@ -15457,7 +15845,7 @@ var Buffer=require("__browserify_Buffer").Buffer;(function () {
 }).call(this);
 
 
-},{"__browserify_Buffer":63,"extended":56}],67:[function(require,module,exports){
+},{"__browserify_Buffer":68,"extended":61}],72:[function(require,module,exports){
 (function () {
     "use strict";
 
@@ -16384,7 +16772,7 @@ var Buffer=require("__browserify_Buffer").Buffer;(function () {
 
 
 
-},{"array-extended":52,"declare.js":55,"extended":56,"is-extended":66,"string-extended":70}],68:[function(require,module,exports){
+},{"array-extended":57,"declare.js":60,"extended":61,"is-extended":71,"string-extended":75}],73:[function(require,module,exports){
 (function () {
     "use strict";
     /*global extended isExtended*/
@@ -16602,7 +16990,7 @@ var Buffer=require("__browserify_Buffer").Buffer;(function () {
 
 
 
-},{"array-extended":52,"extended":56,"is-extended":66}],69:[function(require,module,exports){
+},{"array-extended":57,"extended":61,"is-extended":71}],74:[function(require,module,exports){
 var process=require("__browserify_process");(function () {
     "use strict";
     /*global setImmediate, MessageChannel*/
@@ -17107,7 +17495,7 @@ var process=require("__browserify_process");(function () {
 
 
 
-},{"__browserify_process":64,"arguments-extended":51,"array-extended":52,"declare.js":55,"extended":56,"function-extended":59,"is-extended":66}],70:[function(require,module,exports){
+},{"__browserify_process":69,"arguments-extended":56,"array-extended":57,"declare.js":60,"extended":61,"function-extended":64,"is-extended":71}],75:[function(require,module,exports){
 (function () {
     "use strict";
 
@@ -17754,5 +18142,5 @@ var process=require("__browserify_process");(function () {
 
 
 
-},{"array-extended":52,"date-extended":53,"extended":56,"is-extended":66}]},{},[1])
+},{"array-extended":57,"date-extended":58,"extended":61,"is-extended":71}]},{},[1])
 ;
